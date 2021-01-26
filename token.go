@@ -38,7 +38,7 @@ func New(method SigningMethod) *Token {
 func NewWithClaims(method SigningMethod, claims Claims) *Token {
 	return &Token{
 		Header: map[string]interface{}{
-			"typ": "JWT",
+			"typ": "MWT",
 			"alg": method.Alg(),
 		},
 		Claims: claims,
