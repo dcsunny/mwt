@@ -1,6 +1,7 @@
 package mwt
 
 import (
+	"bytes"
 	"encoding/base64"
 	"strings"
 	"time"
@@ -22,12 +23,17 @@ type Keyfunc func(*Token) (interface{}, error)
 // A JWT Token.  Different fields will be used depending on whether you're
 // creating or parsing/verifying a token.
 type Token struct {
-	Raw       string                 // The raw token.  Populated when you Parse a token
-	Method    SigningMethod          // The signing method used or to be used
-	Header    map[string]interface{} // The first segment of the token
-	Claims    Claims                 // The second segment of the token
-	Signature string                 // The third segment of the token.  Populated when you Parse a token
-	Valid     bool                   // Is the token valid?  Populated when you Parse/Verify a token
+	Raw       string        // The raw token.  Populated when you Parse a token
+	Method    SigningMethod // The signing method used or to be used
+	Header    TokenHeader   // The first segment of the token
+	Claims    Claims        // The second segment of the token
+	Signature string        // The third segment of the token.  Populated when you Parse a token
+	Valid     bool          // Is the token valid?  Populated when you Parse/Verify a token
+}
+
+type TokenHeader struct {
+	Typ string `msgpack:"typ"`
+	Alg string `msgpack:"alg"`
 }
 
 // Create a new Token.  Takes a signing method
@@ -37,9 +43,9 @@ func New(method SigningMethod) *Token {
 
 func NewWithClaims(method SigningMethod, claims Claims) *Token {
 	return &Token{
-		Header: map[string]interface{}{
-			"typ": "MWT",
-			"alg": method.Alg(),
+		Header: TokenHeader{
+			Typ: "MWT",
+			Alg: method.Alg(),
 		},
 		Claims: claims,
 		Method: method,
@@ -73,11 +79,15 @@ func (t *Token) SigningString() (string, error) {
 				return "", err
 			}
 		} else {
-			if value, err = msgpack.Marshal(t.Claims); err != nil {
+			var buf bytes.Buffer
+			enc := msgpack.NewEncoder(&buf)
+			enc.SetSortMapKeys(true)
+			err = enc.Encode(t.Claims)
+			if err != nil {
 				return "", err
 			}
+			value = buf.Bytes()
 		}
-
 		parts[i] = EncodeSegment(value)
 	}
 	return strings.Join(parts, "."), nil
