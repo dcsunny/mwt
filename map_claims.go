@@ -2,6 +2,7 @@ package mwt
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
 	// "fmt"
 )
@@ -26,8 +27,11 @@ func (m MapClaims) VerifyExpiresAt(cmp int64, req bool) bool {
 	case string:
 		v, _ := strconv.ParseInt(exp, 10, 64)
 		return verifyExp(v, cmp, req)
+	case int64:
+		return verifyExp(exp, cmp, req)
 	}
-	return req == false
+	v, _ := strconv.ParseInt(fmt.Sprint(m["exp"]), 10, 64)
+	return verifyExp(v, cmp, req)
 }
 
 // Compares the iat claim against cmp.
@@ -36,11 +40,14 @@ func (m MapClaims) VerifyIssuedAt(cmp int64, req bool) bool {
 	switch iat := m["iat"].(type) {
 	case float64:
 		return verifyIat(int64(iat), cmp, req)
+	case int64:
+		return verifyIat(iat, cmp, req)
 	case string:
 		v, _ := strconv.ParseInt(iat, 10, 64)
 		return verifyIat(v, cmp, req)
 	}
-	return req == false
+	v, _ := strconv.ParseInt(fmt.Sprint(m["iat"]), 10, 64)
+	return verifyIat(v, cmp, req)
 }
 
 // Compares the iss claim against cmp.
@@ -56,11 +63,14 @@ func (m MapClaims) VerifyNotBefore(cmp int64, req bool) bool {
 	switch nbf := m["nbf"].(type) {
 	case float64:
 		return verifyNbf(int64(nbf), cmp, req)
+	case int64:
+		return verifyNbf(nbf, cmp, req)
 	case string:
 		v, _ := strconv.ParseInt(nbf, 10, 64)
 		return verifyNbf(v, cmp, req)
 	}
-	return req == false
+	v, _ := strconv.ParseInt(fmt.Sprint(m["nbf"]), 10, 64)
+	return verifyNbf(v, cmp, req)
 }
 
 // Validates time based claims "exp, iat, nbf".

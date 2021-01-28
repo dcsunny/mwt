@@ -25,7 +25,6 @@ func (p *Parser) ParseWithClaims(tokenString string, claims Claims, keyFunc Keyf
 	if err != nil {
 		return token, err
 	}
-
 	// Verify signing method is in the required set
 	if p.ValidMethods != nil {
 		var signingMethodValid = false
@@ -60,7 +59,7 @@ func (p *Parser) ParseWithClaims(tokenString string, claims Claims, keyFunc Keyf
 
 	// Validate Claims
 	if !p.SkipClaimsValidation {
-		if err := token.Claims.Valid(); err != nil {
+		if err = token.Claims.Valid(); err != nil {
 
 			// If the Claims Valid returned an error, check if it is a validation error,
 			// If it was another error type, create a ValidationError with a generic ClaimsInvalid flag set
@@ -98,7 +97,6 @@ func (p *Parser) ParseUnverified(tokenString string, claims Claims) (token *Toke
 	if len(parts) != 3 {
 		return nil, parts, NewValidationError("token contains an invalid number of segments", ValidationErrorMalformed)
 	}
-
 	token = &Token{Raw: tokenString}
 
 	// parse Header
@@ -114,19 +112,20 @@ func (p *Parser) ParseUnverified(tokenString string, claims Claims) (token *Toke
 	}
 
 	// parse Claims
+	var claimBuffer bytes.Buffer
 	var claimBytes []byte
 	token.Claims = claims
-
 	if claimBytes, err = DecodeSegment(parts[1]); err != nil {
 		return token, parts, &ValidationError{Inner: err, Errors: ValidationErrorMalformed}
 	}
-	dec := msgpack.NewDecoder(bytes.NewBuffer(claimBytes))
-	//if p.UseJSONNumber {
-	//	dec.UseNumber()
-	//}
-	// JSON Decode.  Special case for map type to avoid weird pointer behavior
+
+	claimBuffer = *bytes.NewBuffer(claimBytes)
+	dec := msgpack.NewDecoder(&claimBuffer)
+
+	// msgpack Decode.  Special case for map type to avoid weird pointer behavior
 	if c, ok := token.Claims.(MapClaims); ok {
-		err = dec.Decode(&c)
+		c, err = dec.DecodeMap()
+		token.Claims = c
 	} else {
 		err = dec.Decode(&claims)
 	}
@@ -134,7 +133,6 @@ func (p *Parser) ParseUnverified(tokenString string, claims Claims) (token *Toke
 	if err != nil {
 		return token, parts, &ValidationError{Inner: err, Errors: ValidationErrorMalformed}
 	}
-
 	// Lookup signature method
 	if token.Method = GetSigningMethod(token.Header.Alg); token.Method == nil {
 		return token, parts, NewValidationError("signing method (alg) is unavailable.", ValidationErrorUnverifiable)

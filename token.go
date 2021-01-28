@@ -81,8 +81,12 @@ func (t *Token) SigningString() (string, error) {
 		} else {
 			var buf bytes.Buffer
 			enc := msgpack.NewEncoder(&buf)
-			enc.SetSortMapKeys(true)
-			err = enc.Encode(t.Claims)
+			if _, ok := t.Claims.(MapClaims); ok {
+				enc.SetSortMapKeys(true)
+				err = enc.Encode(t.Claims)
+			} else {
+				err = enc.Encode(t.Claims)
+			}
 			if err != nil {
 				return "", err
 			}
